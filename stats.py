@@ -3,6 +3,11 @@
 Created on Sun Feb  9 12:15:52 2020
 
 @author: caue3201
+
+Références:
+Kurtosis
+https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.kurtosis.html
+https://stackoverflow.com/questions/53024945/calculate-skewness-and-kurtosis
 """
 import os
 import csv
@@ -12,7 +17,7 @@ from datetime import datetime
 from osgeo import gdal
 from scipy.stats import skew
 
-stats = [['name', 'maximum', 'minimum', 'moyenne', 'mediane', 'standdev', 'skewness', 'MAJ']]
+stats = [['name', 'maximum', 'minimum', 'moyenne', 'mediane', 'standdev', 'skewness', 'kurtosis', 'MAJ']]
 
 path_input = [r'F:/Elizabeth/Production_IT/TWI_W/NB/D8/',
               r'F:/Elizabeth/Production_IT/TWI_W/NB/FD8/',
@@ -34,10 +39,12 @@ for path in path_input:
         moyenne = np.nanmean(arrayIT)
         mediane = np.nanmedian(arrayIT)
         standdev = np.nanstd(arrayIT)
-        skewness = np.mean(skew(arrayIT, axis=0, nan_policy='omit'))
+        skewness = skew(arrayIT.reshape(-1), nan_policy='omit')
+        kurtosis = kurtosis(arrayIT.reshape(-1), fisher=True, nan_policy='omit')
         date = datetime.now()
+        readabledate = date.strftime("%c")
 
-        info = [filename, maximum, minimum, moyenne, mediane, standdev, skewness, date]
+        info = [filename, maximum, minimum, moyenne, mediane, standdev, skewness, kurtosis, readabledate]
         stats.append(info)
 
 
