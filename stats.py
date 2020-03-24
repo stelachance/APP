@@ -17,6 +17,8 @@ from datetime import datetime
 from osgeo import gdal
 from scipy.stats import skew
 
+# coucou
+
 stats = [['name', 'maximum', 'minimum', 'moyenne', 'mediane', 'standdev', 'skewness', 'kurtosis', 'MAJ']]
 
 path_input = [r'F:/Elizabeth/Production_IT/TWI_W/NB/D8/',
