@@ -15,20 +15,20 @@ import glob
 import numpy as np
 from datetime import datetime
 from osgeo import gdal
-from scipy.stats import skew
+from scipy.stats import skew, kurtosis
 
 # coucou
 
 stats = [['name', 'maximum', 'minimum', 'moyenne', 'mediane', 'standdev', 'skewness', 'kurtosis', 'MAJ']]
 
-path_input = [r'F:/Elizabeth/Production_IT/TWI_W/NB/D8/',
-              r'F:/Elizabeth/Production_IT/TWI_W/NB/FD8/',
-              r'F:/Elizabeth/Production_IT/TWI_W/NB/Dinf/']
+path_input = [r'F:/Elizabeth/Production_IT/1m_resolution/TWI/Chapeau/D8/',
+              r'F:/Elizabeth/Production_IT/1m_resolution/TWI/Chapeau/FD8/',
+              r'F:/Elizabeth/Production_IT/1m_resolution/TWI/Chapeau/Dinf/']
 
 for path in path_input:
     listeIT = glob.glob(path + '*.tif', recursive=True)
 
-    path_output = r'F:/Elizabeth/Analyse/'
+    path_output = r'F:/Elizabeth/Analyse/1m/'
 
     for imgpath in listeIT:
         filename = os.path.basename(imgpath)
@@ -41,8 +41,9 @@ for path in path_input:
         moyenne = np.nanmean(arrayIT)
         mediane = np.nanmedian(arrayIT)
         standdev = np.nanstd(arrayIT)
-        skewness = skew(arrayIT.reshape(-1), nan_policy='omit')
-        kurtosis = kurtosis(arrayIT.reshape(-1), fisher=True, nan_policy='omit')
+        arrayreshape = arrayIT.reshape(-1)
+        skewness = skew(arrayreshape, nan_policy='omit')
+        kurtosis = kurtosis(arrayreshape, fisher=True, nan_policy='omit')
         date = datetime.now()
         readabledate = date.strftime("%c")
 
@@ -51,7 +52,7 @@ for path in path_input:
 
 
 print(stats)
-with open(path_output + 'NB_stats.csv', 'w', newline='') as file:
+with open(path_output + 'CH_stats.csv', 'w', newline='') as file:
         writer = csv.writer(file)
         for row in stats:
             writer.writerow(row)
