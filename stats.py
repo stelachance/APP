@@ -16,8 +16,6 @@ from osgeo import gdal
 from scipy.stats import skew, kurtosis
 
 
-# coucou
-
 stats = [['name', 'maximum', 'minimum', 'moyenne', 'mediane', 'standdev', 'skewness', 'kurtosis', 'MAJ']]
 
 path_input = [r'F:/Elizabeth/Production_IT/1m_resolution/TWI/NB/D8/',
