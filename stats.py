@@ -27,7 +27,7 @@ for path in path_input:
 
     path_output = r'F:/Elizabeth/Analyse/1m/'
 
-    for imgpath in listeIT:
+    for imgpath in listeIT: #TODO tester si plus rapide avec librairy gdal (voir cookbook)
         filename = os.path.basename(imgpath)
         print(filename)
         ds = gdal.Open(imgpath)

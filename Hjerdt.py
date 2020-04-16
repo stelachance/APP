@@ -1,9 +1,5 @@
-import os
-import glob
 import numpy as np
 from osgeo import gdal
-from tkinter import Tk
-from tkinter.filedialog import askdirectory
 
 '''
 tan alphad = d / Ld 
@@ -13,153 +9,102 @@ following the steepest-direction flow path
 '''
 
 
-def index_2d(data, search):
-    for i, e in enumerate(data):
-        try:
-            return i, e.index(search)
-        except ValueError:
-            pass
-    raise ValueError("{} is not in list".format(repr(search)))
+def raster2array(rasterfn):
+    raster = gdal.Open(rasterfn)
+    band = raster.GetRasterBand(1)
+    array = band.ReadAsArray()
+    return array
 
-def matrice_voisin(array, row, col, x, y):
-    if x >= 1 and y >= 1 and x < (row - 1) and y < (col - 1):  # on ne considère pas les cellules en bordure
-        # g = gauche c = centre d = droit
-        # h = haut m = milieu b = bas
 
-        cell_gh = array[x - 1][y - 1]  # todo remplacer dans la maitrce diff pour simplifier
-        cell_gm = array[x][y - 1]
-        cell_gb = array[x + 1][y - 1]
-        cell_ch = array[x - 1][y]
-        cell_cm = array[x][y]
-        cell_cb = array[x + 1][y]
-        cell_dh = array[x - 1][y + 1]
-        cell_dm = array[x][y + 1]
-        cell_db = array[x + 1][y + 1]
+def find_nearest(array, value):
+    a = np.asarray(array)
+    at = a.transpose()
+    # idx = np.unravel_index(np.argmin(a, axis=None), a.shape)
+    idx1 = np.unravel_index(np.argmin(np.abs(a - value), axis=None), a.shape)
+    idx2 = np.unravel_index(np.argmin(np.abs(at - value), axis=None), at.shape)
+    dist1 = np.sqrt(idx1[0] ** 2 + idx1[1] ** 2)
+    dist2 = np.sqrt(idx2[0] ** 2 + idx2[1] ** 2)
+    if dist1 < dist2:
+        idx = idx1
+    else:
+        idx = idx2[1], idx2[0]
+    return idx
 
-        matrice = [[cell_gh, cell_ch, cell_dh],
-                   [cell_gm, cell_cm, cell_dm],
-                   [cell_gb, cell_cb, cell_db]]
 
-        return(matrice)
+def Hjerdt(d, Ld):
+    calcul = d / Ld
+    return calcul
+
+
+def array2raster(newRasterfn, rasterfn, array):
+    raster = gdal.Open(rasterfn)
+    geotransform = raster.GetGeoTransform()
+    originX = geotransform[0]
+    originY = geotransform[3]
+    pixelWidth = geotransform[1]
+    pixelHeight = geotransform[5]
+    cols = array.shape[1]
+    rows = array.shape[0]
+
+    driver = gdal.GetDriverByName('GTiff')
+    outRaster = driver.Create(newRasterfn, cols, rows, 1, gdal.GDT_Byte)
+    outRaster.SetGeoTransform((originX, pixelWidth, 0, originY, 0, pixelHeight))
+    outband = outRaster.GetRasterBand(1)
+    outband.WriteArray(array)
+    outRasterSRS = osr.SpatialReference()
+    outRasterSRS.ImportFromWkt(raster.GetProjectionRef())
+    outRaster.SetProjection(outRasterSRS.ExportToWkt())
+    outband.FlushCache()
+
+
+'''
+array = ([[9, 8, 5, 3],
+         [5, 7, 6, 2],
+         [1, 2, 6, 1]])
+
+for i in range(len(array)):
+    for j in range(len(array[0])):
+        value = array[i][j] - 5
+        index = find_nearest(array, value)
+        print(value)
+        print(index)
+        #x, y = index[0], index[1]
+        #dist = np.sqrt((i - x)**2 + (j -y)**2)
+        #print(Hjerdt(5, dist))
+        print('______')
 
 '''
 
-            if i >= 1 and j >= 1 and i < (row - 1) and j < (col - 1):  # on ne considère pas les cellules en bordure
-                # g = gauche c = centre d = droit
-                # h = haut m = milieu b = bas
-                print('cellule :', cell)
-                cell_gh = array[i - 1][j - 1]  # todo remplacer dans la maitrce diff pour simplifier
-                cell_gm = array[i][j - 1]
-                cell_gb = array[i + 1][j - 1]
-                cell_ch = array[i - 1][j]
-                cell_cm = array[i][j]
-                cell_cb = array[i + 1][j]
-                cell_dh = array[i - 1][j + 1]
-                cell_dm = array[i][j + 1]
-                cell_db = array[i + 1][j + 1]
 
-                matrice = [[cell_gh, cell_ch, cell_dh],
-                           [cell_gm, cell_cm, cell_dm],
-                           [cell_gb, cell_cb, cell_db]]
-
-                print(matrice)
-'''
+def createIT(array, d):
+    IT = []
+    count = 0
+    while count < 2:
+        for i in range(len(array)):
+            row = []
+            for j in range(len(array[0])):
+                value = array[i][j] - d
+                index = find_nearest(array, value)
+                x, y = index[0], index[1]
+                dist = np.sqrt((i - x) ** 2 + (j - y) ** 2)
+                row.append(Hjerdt(5, dist))
+            count = count + 1
+            print('done: ', (count / len(array)))
+            IT.append(row)
+        print(IT)
+    return IT
 
 
-def index_pour_calcul(array, d, row, col): #todo faire fonction a part pour trouver index pour le calcul
-    '''
-    :param array: MNT sous forme de matrice
-    :param d: paramètre d (différence d'élévation) du calcul du Hjerdt
-    :param nbrow: nombre de rangée de la matrice
-    :param nbcol: nombre de colonne de la matrice
-    :return: position x,y (rangée,  colonne) de la cellule ayant une difference de d # todo fonctionne pas comme retour si on veut avoir lD
-    '''
-    for i in range(row):
-        for j in range(col):
-            cell = array[i][j]
-            print('cellule :', cell)
-
-            matrice = matrice_voisin(array, row, col, i, j)
-            print('matrice:', matrice)
-
-            positionx = 0
-            '''
-            for k in matrice:
-                for l in k:
-                    if l == (cell - d):
-                        positiony = k.index(l)
-                        print('yes k ', positionx)
-                        print('position: ', positiony)
-                positionx += 1
-            '''
-    return(positionx, positiony)
+def main(MNTpath, outputPathfn, d):
+    MNTarray = raster2array(MNTpath)  # creates array from MNT
+    Hjerdtarray = createIT(MNTarray, d)
+    # Hjerdtarray = createPath(MNTpath, MNTarray, startCoord, stopCoord) # creates path array
+    array2raster(outputPathfn, MNTpath, Hjerdtarray)  # converts IT array to raster
 
 
-def Hjerdt(array, d):
-    '''
-    :param array: MNT sous forme de matrice
-    :param d: différence d'élévation à considérer pour le calcul du Hjerdt (paramètre d)
-    :return: matrice résultante du calcul Hjerdt
-
-    pseudo-code:
-    pour chaque élément du MNT sous forme de matrice:
-        trouver la cellule la plus près (donc Ld le plus faible) ayant une différence de d
-        calculer le Ld
-        mettre le Ld dans la matrice Ld
-
-    pour tous les éléments de la matrice ld:
-        calculer le Hdjert
-
-    retourner la matrice Hjert
-    '''
-    Ld = [[]]
-    nbrow = len(array)
-    nbcol = len(array[0])
-
-    print('array : ', array)
-    index_pour_calcul(smallarray, 5, nbrow, nbcol)
-    # print('size : ', nbrow, nbcol)
-
-    # calcul = d/Ld
-
-
-smallarray = [[9, 8, 5, 3],
-              [5, 7, 6, 2],
-              [1, 2, 6, 1]]
-Hjerdt(smallarray, 5)
-'''
-def main():
-    # source = r'C:/Users/caue3201/Downloads/Kingston/Kingston/'
-    Tk().withdraw()
-    #source = askdirectory(title=u"Sélectionner le dossier contenant les MNT")
-    source = r'F:/Jonathan/APP_Jonathan/MNT/Kingston/'
-    #sortie = askdirectory(title=u"Sélectionner le dossier pour les fichiers de sortie")
-    listeMNT = glob.glob(source + 'dtm_2m_utm18_w_5_44.tif')
-
-    for imgpath in listeMNT:
-        filename = os.path.basename(imgpath)
-        print(filename)
-        #ds = gdal.Open(imgpath)
-        #array = np.array(ds.GetRasterBand(1).ReadAsArray())
-        #smallarray = array[555:556] todo il va falloir considérer la différence d en integer, pas float
-        smallarray = [[9, 8, 5, 3],
-                      [5, 7, 4, 2],
-                      [1, 3, 6, 1]]
-        Hjerdt(smallarray, 5)
-
-
-
-
-
-
-
-        # print('Méthode D8 en cours...')
-        # D8(source, filename, r'F:/Elizabeth/Production_IT/TWI_W/Kingston/D8/')
-        # print('Méthode Dinf en cours...')
-        # Dinf(source, filename, r'F:/Elizabeth/Production_IT/TWI_W/Kingston/Dinf/')
-        # print('Méthode FD8 en cours...')
-        # fD8(source, filename, r'F:/Elizabeth/Production_IT/TWI_W/Kingston/FD8/')
-
-
-main()
-'''
+if __name__ == "__main__":
+    # MNTpath = 'D:/Jonathan/APP_Jonathan/MNT/Reproj/Chapeau/MNT_CH_18_13w109.tif'
+    MNTpath = r'C:/Users/caue3201/Desktop/test.tif'
+    outputPathfn = r'C:/Users/caue3201/Desktop/test_result.tif'
+    d = 5
+    main(MNTpath, outputPathfn, d)
